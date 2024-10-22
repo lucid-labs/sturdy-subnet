@@ -18,7 +18,7 @@ THRESHOLD = 0.99  # to prevent over-allocations
 RANDOMNESS_FACTOR = 0.02  # Introduces small random variations to avoid similarity penalties
 
 def optimized_algorithm(self: BaseMinerNeuron, synapse: AllocateAssets) -> dict:
-    bt.logging.debug(f"Received request type: {synapse.request_type}")
+    bt.logging.debug(f"Received request: {synapse}")
     pools = cast(dict, synapse.assets_and_pools["pools"])
 
     # Adjust pool handling based on request type
@@ -79,5 +79,5 @@ def optimized_algorithm(self: BaseMinerNeuron, synapse: AllocateAssets) -> dict:
             allocation = minimums[uid]
         allocations[uid] = allocation
 
-    bt.logging.debug(f"Generated allocations: {allocations}")
+    bt.logging.info(f"Generated allocations: {allocations}")
     return allocations
