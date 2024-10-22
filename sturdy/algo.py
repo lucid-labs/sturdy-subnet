@@ -17,7 +17,7 @@ from sturdy.pools import (
 from sturdy.protocol import REQUEST_TYPES, AllocateAssets
 
 RANDOMNESS_FACTOR = gmpy2.mpfr('0.009')  # Randomness factor to avoid similarity penalties
-THRESHOLD = gmpy2.mpfr('0.98')  # Threshold to avoid over-allocation
+THRESHOLD = gmpy2.mpfr('0.981')  # Threshold to avoid over-allocation
 
 def optimized_algorithm(self: BaseMinerNeuron, synapse: AllocateAssets) -> dict:
     bt.logging.debug(f"Received request: {synapse}")
@@ -86,11 +86,19 @@ def optimized_algorithm(self: BaseMinerNeuron, synapse: AllocateAssets) -> dict:
     # Assign the remaining assets to the pool with the highest APY
     allocations[max_apy_pool] += remaining_balance
 
+    total_allocation = gmpy2.mpz(0)
+
     # Add randomness to allocations to avoid similarity penalties
     for pool_uid in allocations:
         random_factor = 1 + gmpy2.mpfr(random.uniform(-RANDOMNESS_FACTOR, RANDOMNESS_FACTOR))
         randomised_allocation = gmpy2.ceil(allocations[pool_uid] * random_factor)
         allocations[pool_uid] = gmpy2.mpz(max(randomised_allocation, minimums[pool_uid]))
+        # maintain the total allocation
+        total_allocation += allocations[pool_uid]
+
+    # if the total_allocation is less than the threeshold * total_assets, add the difference to the pool with the highest APY
+    if total_allocation < total_assets_available:
+        allocations[max_apy_pool] += total_assets_available - total_allocation
 
     # Convert allocations to integers for compatibility
     final_allocations = {uid: int(alloc) for uid, alloc in allocations.items()}
