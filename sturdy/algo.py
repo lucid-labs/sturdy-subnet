@@ -1,7 +1,9 @@
 import math
+import random
 from typing import cast
 
 import bittensor as bt
+
 from sturdy.base.miner import BaseMinerNeuron
 from sturdy.pools import (
     POOL_TYPES,
@@ -11,17 +13,18 @@ from sturdy.pools import (
     DaiSavingsRate,
     VariableInterestSturdySiloStrategy,
     get_minimum_allocation,
+    check_allocations,
 )
 from sturdy.protocol import REQUEST_TYPES, AllocateAssets
 
-THRESHOLD = 0.99  # Used to avoid over-allocations
+THRESHOLD = 0.99  # used to avoid over-allocations
+
 
 def naive_algorithm(self: BaseMinerNeuron, synapse: AllocateAssets) -> dict:
-    bt.logging.debug(f"received request type: {synapse.request_type}")
+    bt.logging.debug(f"Received request type: {synapse.request_type}")
     
+    # Initialize pools based on request type
     pools = cast(dict, synapse.assets_and_pools["pools"])
-    
-    # Step 1: Initialize pools based on request type
     match synapse.request_type:
         case REQUEST_TYPES.ORGANIC:
             for uid in pools:
@@ -36,22 +39,18 @@ def naive_algorithm(self: BaseMinerNeuron, synapse: AllocateAssets) -> dict:
                         pools[uid] = CompoundV3Pool(**pools[uid].dict())
                     case _:
                         pass
-        case _:  # Handle synthetic requests
+
+        case _:  # Synthetic requests handled here
             for uid in pools:
                 pools[uid] = BasePool(**pools[uid].dict())
 
-    # Step 2: Calculate total available assets after minimum allocations
+    # Calculate total available assets
     total_assets_available = int(THRESHOLD * synapse.assets_and_pools["total_assets"])
-    minimums = {pool_uid: get_minimum_allocation(pool) for pool_uid, pool in pools.items()}
-    total_assets_available -= sum(minimums.values())
-
-    # Step 3: Calculate APYs for each pool
     supply_rates = {}
-    max_apy_pool_uid = None
-    max_apy = -1
+    supply_rate_sum = 0
 
-    for pool_uid, pool in pools.items():
-        # Sync pool data from the chain
+    # Sync pool parameters via on-chain smart contract calls
+    for pool in pools.values():
         match pool.pool_type:
             case POOL_TYPES.AAVE:
                 pool.sync(synapse.user_address, self.w3)
@@ -62,24 +61,48 @@ def naive_algorithm(self: BaseMinerNeuron, synapse: AllocateAssets) -> dict:
             case _:
                 pass
 
-        # Calculate the APY for the current pool
-        apy = pool.supply_rate(
-            amount=total_assets_available // len(pools)
-        )  # Adjust the amount as needed
+    # Calculate minimum allocations for each pool
+    minimums = {pool_uid: get_minimum_allocation(pool) for pool_uid, pool in pools.items()}
+    total_assets_available -= sum(minimums.values())
+    balance = int(total_assets_available)
 
-        supply_rates[pool_uid] = apy
+    # Obtain APY for each pool
+    for pool in pools.values():
+        match pool.pool_type:
+            case POOL_TYPES.AAVE:
+                apy = pool.supply_rate(synapse.user_address, balance // len(pools))
+            case T if T in (POOL_TYPES.STURDY_SILO, POOL_TYPES.COMPOUND_V3, POOL_TYPES.MORPHO):
+                apy = pool.supply_rate(balance // len(pools))
+            case POOL_TYPES.DAI_SAVINGS:
+                apy = pool.supply_rate()
+            case POOL_TYPES.SYNTHETIC:
+                apy = pool.supply_rate
+            case _:
+                continue
+        supply_rates[pool.contract_address] = apy
+        supply_rate_sum += apy
 
-        # Track the pool with the highest APY
-        if apy > max_apy:
-            max_apy = apy
-            max_apy_pool_uid = pool_uid
+    # Find the pool with the highest APY
+    max_apy_pool = max(supply_rates, key=supply_rates.get)
+    remaining_assets = balance
 
-    # Step 4: Allocate assets
-    allocations = {pool_uid: minimums[pool_uid] for pool_uid in pools}
+    # Allocate funds with randomness to reduce similarity penalties
+    allocations = {}
+    for pool_uid in pools:
+        min_alloc = minimums[pool_uid]
 
-    # Allocate all remaining assets to the pool with the highest APY
-    if max_apy_pool_uid:
-        allocations[max_apy_pool_uid] += total_assets_available
+        # Introduce a small random variation (±3%) in allocations
+        random_factor = 1 + random.uniform(-0.03, 0.03)
+        if pool_uid == max_apy_pool:
+            allocations[pool_uid] = int((remaining_assets + min_alloc) * random_factor)
+        else:
+            allocations[pool_uid] = int(min_alloc * random_factor)
 
-    bt.logging.info(f"Allocations: {allocations}")
+    # Validate the final allocations
+    if not check_allocations(synapse.assets_and_pools, allocations):
+        bt.logging.error("Invalid allocations returned! Adjusting to minimums.")
+        return minimums  # Fallback to minimum allocations if validation fails
+
+    bt.logging.debug(f"Allocations: {allocations}")
+
     return allocations
