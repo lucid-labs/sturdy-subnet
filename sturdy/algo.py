@@ -88,8 +88,8 @@ def optimized_algorithm(self: BaseMinerNeuron, synapse: AllocateAssets) -> dict:
 
     # Add randomness to allocations to avoid similarity penalties
     for pool_uid in allocations:
-        random_factor = 1 + gmpy2.mpfr(random.uniform(-RANDOMNESS_FACTOR, RANDOMNESS_FACTOR))
-        allocations[pool_uid] = gmpy2.mpz(gmpy2.floor(allocations[pool_uid] * random_factor))
+        random_factor = 1 + gmpy2.mpfr(random.uniform(0, RANDOMNESS_FACTOR))
+        allocations[pool_uid] = gmpy2.mpz(gmpy2.ceil(allocations[pool_uid] * random_factor))
 
     # Convert allocations to integers for compatibility
     final_allocations = {uid: int(alloc) for uid, alloc in allocations.items()}
