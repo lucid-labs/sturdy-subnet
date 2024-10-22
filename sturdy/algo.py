@@ -17,7 +17,7 @@ from sturdy.pools import (
 from sturdy.protocol import REQUEST_TYPES, AllocateAssets
 
 RANDOMNESS_FACTOR = gmpy2.mpfr('0.009')  # Randomness factor to avoid similarity penalties
-THRESHOLD = gmpy2.mpfr('0.981')  # Threshold to avoid over-allocation
+THRESHOLD = gmpy2.mpfr('0.99')  # Threshold to avoid over-allocation
 
 def optimized_algorithm(self: BaseMinerNeuron, synapse: AllocateAssets) -> dict:
     bt.logging.debug(f"Received request: {synapse}")
