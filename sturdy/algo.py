@@ -16,8 +16,8 @@ from sturdy.pools import (
 )
 from sturdy.protocol import REQUEST_TYPES, AllocateAssets
 
-RANDOMNESS_FACTOR = gmpy2.mpfr('0.05')  # Randomness factor to avoid similarity penalties
-THRESHOLD = gmpy2.mpfr('0.99')  # Threshold to avoid over-allocation
+RANDOMNESS_FACTOR = gmpy2.mpfr('0.009')  # Randomness factor to avoid similarity penalties
+THRESHOLD = gmpy2.mpfr('0.98')  # Threshold to avoid over-allocation
 
 def optimized_algorithm(self: BaseMinerNeuron, synapse: AllocateAssets) -> dict:
     bt.logging.debug(f"Received request: {synapse}")
@@ -88,8 +88,9 @@ def optimized_algorithm(self: BaseMinerNeuron, synapse: AllocateAssets) -> dict:
 
     # Add randomness to allocations to avoid similarity penalties
     for pool_uid in allocations:
-        random_factor = 1 + gmpy2.mpfr(random.uniform(0, RANDOMNESS_FACTOR))
-        allocations[pool_uid] = gmpy2.mpz(gmpy2.ceil(allocations[pool_uid] * random_factor))
+        random_factor = 1 + gmpy2.mpfr(random.uniform(-RANDOMNESS_FACTOR, RANDOMNESS_FACTOR))
+        randomised_allocation = gmpy2.ceil(allocations[pool_uid] * random_factor)
+        allocations[pool_uid] = gmpy2.mpz(max(randomised_allocation, minimums[pool_uid]))
 
     # Convert allocations to integers for compatibility
     final_allocations = {uid: int(alloc) for uid, alloc in allocations.items()}
