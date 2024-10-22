@@ -11,6 +11,7 @@ from sturdy.pools import (
     BasePool,
     PoolFactory,
     get_minimum_allocation,
+    check_allocations,
 )
 from sturdy.protocol import REQUEST_TYPES, AllocateAssets
 
@@ -54,7 +55,11 @@ def optimized_algorithm(self: BaseMinerNeuron, synapse: AllocateAssets) -> dict:
 
     # Retrieve minimum allocations for each pool
     minimums = {pool_uid: get_minimum_allocation(pool) for pool_uid, pool in pools.items()}
+
+    bt.logging.info(f"Minimums: {minimums}")
+
     total_assets_available -= sum(minimums.values())
+    balance = total_assets_available
 
     # Calculate APYs for each pool to identify the pool with the highest APY
     supply_rates = {}
@@ -75,6 +80,8 @@ def optimized_algorithm(self: BaseMinerNeuron, synapse: AllocateAssets) -> dict:
     # Determine the pool with the highest APY
     max_apy_pool = max(supply_rates, key=supply_rates.get)
 
+    bt.logging.info(f"Max APY pool: {max_apy_pool}")
+
     # Initialize allocations with minimum values
     allocations = {pool_uid: minimums[pool_uid] for pool_uid in pools}
 
@@ -85,6 +92,14 @@ def optimized_algorithm(self: BaseMinerNeuron, synapse: AllocateAssets) -> dict:
     for pool_uid in allocations:
         random_factor = 1 + random.uniform(-RANDOMNESS_FACTOR, RANDOMNESS_FACTOR)
         allocations[pool_uid] = math.floor(allocations[pool_uid] * random_factor)
+    
+    # Call the `check_allocations` function to validate allocations
+    is_valid = check_allocations(synapse.assets_and_pools, allocations)
+
+    if is_valid:
+        bt.logging.info("Allocations are valid according to validator rules.")
+    else:
+        bt.logging.error("Allocations failed validation check! Please investigate.")
 
     bt.logging.info(f"Allocations: {allocations}")
 
