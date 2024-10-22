@@ -107,9 +107,11 @@ def check_allocations(
 
     # Ensure the 'total_assets' key exists in assets_and_pools and is a valid number
     to_allocate = assets_and_pools.get("total_assets")
+    
     if to_allocate is None or not isinstance(to_allocate, int):
         return False
 
+    print(f"################ to_allocate: {to_allocate}")
     to_allocate = Decimal(str(to_allocate))
     total_allocated = Decimal(0)
     total_assets = assets_and_pools["total_assets"]
@@ -129,6 +131,8 @@ def check_allocations(
         if total_allocated > to_allocate:
             return False
 
+    print(f"################ total_allocated: {total_allocated}")
+
     # Ensure total allocated does not exceed the total assets, and that most assets have been allocated
     if total_allocated > to_allocate or total_allocated < int(alloc_threshold * total_assets):
         return False
@@ -141,7 +145,8 @@ def check_allocations(
 
         if allocation < min_alloc:
             return False
-
+    print(f"################ allocations are valid")
+    
     return True
 
 
