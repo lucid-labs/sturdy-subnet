@@ -23,7 +23,7 @@ import bittensor as bt
 
 # Bittensor Miner Template:
 import sturdy
-from sturdy.algo import naive_algorithm
+from sturdy.algo import optimized_algorithm
 
 # import base miner class which takes care of most of the boilerplate
 from sturdy.base.miner import BaseMinerNeuron
@@ -65,7 +65,7 @@ class Miner(BaseMinerNeuron):
 
         # try use default greedy alloaction algorithm to generate allocations
         try:
-            synapse.allocations = naive_algorithm(self, synapse)
+            synapse.allocations = optimized_algorithm(self, synapse)
         except Exception as e:
             bt.logging.error(f"Error: {e}")
             # just return the auto vali generated allocations
