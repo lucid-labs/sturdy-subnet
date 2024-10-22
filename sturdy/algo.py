@@ -61,9 +61,9 @@ def optimized_algorithm(self: BaseMinerNeuron, synapse: AllocateAssets) -> dict:
     for pool in pools.values():
         match pool.pool_type:
             case POOL_TYPES.AAVE:
-                apy = pool.supply_rate(synapse.user_address)  # type: ignore[]
+                apy =pool.supply_rate(synapse.user_address, balance // len(pools))  # type: ignore[]
             case T if T in (POOL_TYPES.STURDY_SILO, POOL_TYPES.COMPOUND_V3, POOL_TYPES.MORPHO, POOL_TYPES.YEARN_V3):
-                apy = pool.supply_rate()  # type: ignore[]
+                apy = pool.supply_rate(balance // len(pools))  # type: ignore[]
             case POOL_TYPES.DAI_SAVINGS:
                 apy = pool.supply_rate()
             case POOL_TYPES.SYNTHETIC:
