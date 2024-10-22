@@ -125,6 +125,7 @@ def check_allocations(
         try:
             allocation_value = Decimal(str(allocation))
         except (ValueError, TypeError):
+            bt.logging.error(f"Allocation value is not a valid number: {allocation}")
             return False
 
         if allocation_value < 0:
@@ -133,6 +134,7 @@ def check_allocations(
         total_allocated += allocation_value
 
         if total_allocated > to_allocate:
+            bt.logging.error(f"Total allocated exceeds to_allocate: {total_allocated} > {to_allocate}")
             return False
 
     bt.logging.info(f"total_allocated: {total_allocated}")
@@ -148,6 +150,7 @@ def check_allocations(
         min_alloc = get_minimum_allocation(pool)
 
         if allocation < min_alloc:
+            bt.logging.error(f"Allocation is less than the minimum allocation: {allocation} < {min_alloc}")
             return False
 
     bt.logging.info(f"allocations are valid")
