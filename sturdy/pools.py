@@ -105,11 +105,17 @@ def check_allocations(
     if not allocations or not isinstance(allocations, dict):
         return False
 
+    bt.logging.info(f"Allocations are provided and are valid dictionary")
+
     # Ensure the 'total_assets' key exists in assets_and_pools and is a valid number
     to_allocate = assets_and_pools.get("total_assets")
+    
+    bt.logging.info(f"to_allocate: {to_allocate}")
+
     if to_allocate is None or not isinstance(to_allocate, int):
         return False
 
+    bt.logging.info(f"to_allocate is a valid number")
     to_allocate = Decimal(str(to_allocate))
     total_allocated = Decimal(0)
     total_assets = assets_and_pools["total_assets"]
@@ -119,6 +125,7 @@ def check_allocations(
         try:
             allocation_value = Decimal(str(allocation))
         except (ValueError, TypeError):
+            bt.logging.error(f"Allocation value is not a valid number: {allocation}")
             return False
 
         if allocation_value < 0:
@@ -127,12 +134,15 @@ def check_allocations(
         total_allocated += allocation_value
 
         if total_allocated > to_allocate:
+            bt.logging.error(f"Total allocated exceeds to_allocate: {total_allocated} > {to_allocate}")
             return False
 
+    bt.logging.info(f"total_allocated: {total_allocated}")
     # Ensure total allocated does not exceed the total assets, and that most assets have been allocated
     if total_allocated > to_allocate or total_allocated < int(alloc_threshold * total_assets):
         return False
 
+    bt.logging.info(f"total_allocated does not exceed the total assets, and that most assets have been allocated")
     pools = assets_and_pools["pools"]
     # check if allocations are above the borrow amounts
     for pool_uid, pool in pools.items():
@@ -140,6 +150,7 @@ def check_allocations(
         min_alloc = get_minimum_allocation(pool)
 
         if allocation < min_alloc:
+            bt.logging.error(f"Allocation is less than the minimum allocation: {allocation} < {min_alloc}")
             return False
 
     return True
