@@ -12,7 +12,6 @@ from sturdy.pools import (
     BasePool,
     PoolFactory,
     get_minimum_allocation,
-    check_allocations,
 )
 from sturdy.protocol import REQUEST_TYPES, AllocateAssets
 
@@ -20,7 +19,7 @@ RANDOMNESS_FACTOR = gmpy2.mpfr('0.009')  # Randomness factor to avoid similarity
 THRESHOLD = gmpy2.mpfr('0.99')  # Threshold to avoid over-allocation
 
 def optimized_algorithm(self: BaseMinerNeuron, synapse: AllocateAssets) -> dict:
-    bt.logging.debug(f"Received request: {synapse}")
+    bt.logging.debug(f"Received request type: {synapse.request_type}")
 
     pools = cast(dict, synapse.assets_and_pools["pools"])
 
@@ -52,11 +51,9 @@ def optimized_algorithm(self: BaseMinerNeuron, synapse: AllocateAssets) -> dict:
 
     # Calculate minimum allocations for each pool
     minimums = {pool_uid: gmpy2.mpz(get_minimum_allocation(pool)) for pool_uid, pool in pools.items()}
-    bt.logging.info(f"Minimums: {minimums}")
 
     total_assets_available -= sum(minimums.values())
     remaining_balance = total_assets_available
-    bt.logging.info(f"Remaining balance: {remaining_balance}")
 
     # Calculate APY for each pool
     supply_rates = {}
@@ -74,11 +71,9 @@ def optimized_algorithm(self: BaseMinerNeuron, synapse: AllocateAssets) -> dict:
                 apy = gmpy2.mpz(0)
         supply_rates[pool.contract_address] = apy
 
-    bt.logging.info(f"Supply rates: {supply_rates}")
 
     # Identify the pool with the highest APY
     max_apy_pool = max(supply_rates, key=supply_rates.get)
-    bt.logging.info(f"Max APY pool: {max_apy_pool}")
 
     # Initialize allocations with minimums
     allocations = {pool_uid: minimums[pool_uid] for pool_uid in pools}
@@ -104,12 +99,12 @@ def optimized_algorithm(self: BaseMinerNeuron, synapse: AllocateAssets) -> dict:
     final_allocations = {uid: int(alloc) for uid, alloc in allocations.items()}
 
     # Validate allocations using the check_allocations function
-    is_valid = check_allocations(synapse.assets_and_pools, final_allocations)
-    if is_valid:
-        bt.logging.info("Allocations are valid according to validator rules.")
-    else:
-        bt.logging.error("Allocations failed validation check! Please investigate.")
+    # is_valid = check_allocations(synapse.assets_and_pools, final_allocations)
+    # if is_valid:
+    #     bt.logging.info("Allocations are valid according to validator rules.")
+    # else:
+    #     bt.logging.error("Allocations failed validation check! Please investigate.")
 
-    bt.logging.info(f"Final Allocations: {final_allocations}")
+    # bt.logging.info(f"Final Allocations: {final_allocations}")
 
     return final_allocations

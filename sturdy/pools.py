@@ -153,7 +153,6 @@ def check_allocations(
             bt.logging.error(f"Allocation is less than the minimum allocation: {allocation} < {min_alloc}")
             return False
 
-    bt.logging.info(f"allocations are valid")
     return True
 
 
